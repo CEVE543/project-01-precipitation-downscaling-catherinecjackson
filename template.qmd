@@ -87,10 +87,9 @@ display(precip_tx)
 # Remove all of the missing values from the precipitation data
 # This is necessary for the RainFARM Package
 precip_tx_p = precip_tx["precip"]
-test_precip_tx_p = precip_tx_p[:, :, 1:10]
-precip_tx_no_missing = test_precip_tx_p[.!ismissing.(test_precip_tx_p)]
+#test_precip_tx_p = precip_tx_p[:, :, 1:10]
+#precip_tx_no_missing = test_precip_tx_p[.!ismissing.(test_precip_tx_p)]
 
-display(precip_tx_no_missing)
 ```
 
 ``` {julia}
