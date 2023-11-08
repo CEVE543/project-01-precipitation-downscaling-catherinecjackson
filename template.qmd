@@ -43,6 +43,10 @@ Statistical Downscaling, SD, consists of a identified historical period (calibra
 Sources include the Copernicus Climate Change Service (C3S), National Oceanic and Atmospheric Administration (NOAA), Evaluaation of statistical downscaling methods for climate change projections over Spain: Present conditions with perfect predictors (2021).
 :::
 
+# Project
+For this project, I will be conducting a slightly different analysis than others in the class.  As I proposed to Dr. Doss-Gollin, I want to undertake a deep dive into a Julia based Downscaling Package, analyze the methods and algorithms used, apply it to 
+
+# Packages
 ```{julia}
 using Plots
 using StatsBase
@@ -54,10 +58,10 @@ using NCDatasets
 using StatsBase: shuffle
 using NCDatasets
 using RainFARM
+using DataFrames
 ```
 
 # Downloading Data
-
 ```{julia}
 precip_tx = NCDataset("data/precip_tx.nc")
 temp_2015 = NCDataset("data/raw/2m_temperature_2015.nc")
@@ -76,18 +80,12 @@ press_2020 = NCDataset("data/raw/500hPa_geopotential_2020.nc")
 display(precip_tx)
 ```
 
-# Data Processing
-
+# Data Preprocessing
 ``` {julia}
-# Latitude and Longitude of the Precipitation File
-lat_range = precip_tx["lat"][:]
-lon_range = precip_tx["lon"][:]
-temp_2015 = temp_2015["t2m"]
-temp_2016 = temp_2016["t2m"]
-temp_2017 = temp_2017["t2m"]
-temp_2018 = temp_2018["t2m"]
-temp_2019 = temp_2019["t2m"]
-temp_2020 = temp_2020["t2m"]
+# Remove all of the missing values from the precipitation data
+# This is necessary for the RainFARM Package
+precip_tx_p = precip_tx["precip"]
+precip_tx_no_missing = precip_tx[.!ismissing.(precip_tx)]
 ```
 
 ``` {julia}
@@ -106,8 +104,9 @@ temp15to18                         = temp_2015to2018
 
 ```{julia}
 using RainFARM
+using DataFrames
 # use rainfarm to downscale the precipitation data
-r = precip_tx["precip"]
+r = precip_tx_no_missing
 slope = 1;
 nf = 5;
 downscaled_precip_tx = rainfarm(r, slope, nf)
@@ -163,4 +162,26 @@ The Lab 06 methodology is as follows:
 The Lab 06 methodology was implemented in Julia using the following code:
 
 ```{julia}
+# Assuming `precip` is your precipitation data variable
+# Dimensions: lon × lat × time
+
+# Create an empty array to store data without missing values
+cleaned_precip_tx = Float32[]
+# Loop through the time dimension
+for t = 1:8760
+    # Extract a 2D slice at time t
+    slice = precip_tx[:, :, t]
+    # Filter out missing values from the 2D slice
+    #cleaned_slice = filter(x -> !ismissing(x), slice)
+    # Append the cleaned slice to the cleaned_precip array
+    #append!(cleaned_precip_tx, cleaned_slice)
+end
+
+# Calculate the new dimensions after removing missing values
+#new_lon, new_lat, new_time = size(precip_tx)
+
+# Reshape the cleaned data to match the original dimensions
+#cleaned_precip_tx = reshape(cleaned_precip_tx, new_lon, new_lat, new_time)
+
+# Now, `cleaned_precip` contains your data with missing values removed
 ```
