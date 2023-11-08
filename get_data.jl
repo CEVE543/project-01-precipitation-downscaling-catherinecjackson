@@ -269,7 +269,7 @@ function run_demo()
     # the path to the raw data folder
     data_dir = joinpath(HOMEDIR, "data", "raw")
 
-    years = 2019:2020 # example time range
+    years = 2015:2020 # example time range
     for year in years
 
         # Download 2m air temperature for the year 2020
@@ -295,8 +295,8 @@ function run_demo()
     fnames = shuffle(glob("500hPa_geopotential", data_dir))
     z500 = open_mfdataset(fnames, "z")
 
-    display(t2m)
-    display(z500)
+    #display(t2m)
+    #display(z500)
 
     return nothing
 end

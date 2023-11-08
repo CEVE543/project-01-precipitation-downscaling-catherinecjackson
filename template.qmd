@@ -25,14 +25,93 @@ format:
 
 # Intro
 
+## Statistical and Dynamical Downscaling
+Global Climate Models, also referred to as GCMs, are incredibly valuable tools in that they can capture large scale climate dynamics (e.g. future greenhouse gas concentration over the entire Earth).  Furthermore, many of these phenomena must be studied at a global scale.  However, there are limitations to GCMs.  Primarily, given the large scale analysis, grid cells and computation points for these models are actually quite large.  This leads to problems when trying to study local phenomena, such as the climate of a specific city or region.  This is when downscaling must be used.  There are two types of downscaling: Dynamical and Statistical. 
+
+### Dynamical Downscaling
+This type of downscaling uses a Regional Climate Model (RCM) which takes in the output of a GCM as a boundary condition.  Then, RCM use these boundary conditions and physical principles to generate higher resolution local climate.  However, thse are computationally expensive.
+
+### Statistical Downscaling
+Statistical Downscaling is another common method dependent on the availability of local weather data, such as precipitation.  A statistical relationship is developed between the historic observed climate data and the output of the climate model for the same historical period.  Then, this statistical relationship is used to downscale the climate model output to the local scale.  This can be combined with bias correction and adjustment to improve the accuracy of the downscaled data.
+
+For this project, we will be using statistical downscaling in that we will attempt to determine a relationship between global predictors like temperature and pressure and local precipitation.  Then, we will use this relationship to downscale the precipitation data.
+
+### Statistical Downscaling Methods
+Statistical Downscaling, SD, consists of a identified historical period (calibration) used to analyze the predictor/predictand relationship.  This relationship is then applied to predictors from the GCMs to get the local climate projections. 
+
+:::{.callout-note}
+Sources include the Copernicus Climate Change Service (C3S), National Oceanic and Atmospheric Administration (NOAA), Evaluaation of statistical downscaling methods for climate change projections over Spain: Present conditions with perfect predictors (2021).
+:::
+
 ```{julia}
 using Plots
 using StatsBase
 using StatsPlots
 using Distributions
 using Statistics
+using CDSAPI
+using NCDatasets
+using StatsBase: shuffle
+using NCDatasets
+using RainFARM
 ```
 
+# Downloading Data
+
+```{julia}
+precip_tx = NCDataset("data/precip_tx.nc")
+temp_2015 = NCDataset("data/raw/2m_temperature_2015.nc")
+temp_2016 = NCDataset("data/raw/2m_temperature_2016.nc")
+temp_2017 = NCDataset("data/raw/2m_temperature_2017.nc")
+temp_2018 = NCDataset("data/raw/2m_temperature_2018.nc")
+temp_2019 = NCDataset("data/raw/2m_temperature_2019.nc")
+temp_2020 = NCDataset("data/raw/2m_temperature_2020.nc")
+press_2015 = NCDataset("data/raw/500hPa_geopotential_2015.nc")
+press_2016 = NCDataset("data/raw/500hPa_geopotential_2016.nc")
+press_2017 = NCDataset("data/raw/500hPa_geopotential_2017.nc")
+press_2018 = NCDataset("data/raw/500hPa_geopotential_2018.nc")
+press_2019 = NCDataset("data/raw/500hPa_geopotential_2019.nc")
+press_2020 = NCDataset("data/raw/500hPa_geopotential_2020.nc")
+
+display(precip_tx)
+```
+
+# Data Processing
+
+``` {julia}
+# Latitude and Longitude of the Precipitation File
+lat_range = precip_tx["lat"][:]
+lon_range = precip_tx["lon"][:]
+temp_2015 = temp_2015["t2m"]
+temp_2016 = temp_2016["t2m"]
+temp_2017 = temp_2017["t2m"]
+temp_2018 = temp_2018["t2m"]
+temp_2019 = temp_2019["t2m"]
+temp_2020 = temp_2020["t2m"]
+```
+
+``` {julia}
+# combine all temp files so there is a continuous time variable
+# select the first 8760 hours of the 2016 data t2m
+# 2016 is a leap year so it has 8784 hours
+temp_2016 = temp_2016[:, :, 1:8760];
+# create an empty matrix with dimensions 66, 27, 34680
+temp_2015to2018                    = zeros(66, 27, 34680)
+temp_2015to2018[:, :, 1:8760]      = temp_2015
+temp_2015to2018[:, :, 8761:17340]  = temp_2016
+temp_2015to2018[:, :, 17341:26010] = temp_2017
+temp_2015to2018[:, :, 26011:34680] = temp_2018
+temp15to18                         = temp_2015to2018
+```
+
+```{julia}
+using RainFARM
+# use rainfarm to downscale the precipitation data
+r = precip_tx["precip"]
+slope = 1;
+nf = 5;
+downscaled_precip_tx = rainfarm(r, slope, nf)
+```
 
 # Quantile Quantile Mapping
 Quantile-Quantile Mapping, or Q-Q Mapping, can be used to downscale climate data. This method is used to adjust the distribution of a variable to match the distribution of another variable. In this case, we are using Q-Q Mapping to adjust the distribution of the precipitation data to match the observed temperature data.  Temperature data tends to be smoother and more reliable than precipitation data, so we are using the temperature data as a reference to adjust the precipitation data.
@@ -84,3 +163,4 @@ The Lab 06 methodology is as follows:
 The Lab 06 methodology was implemented in Julia using the following code:
 
 ```{julia}
+```
