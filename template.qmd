@@ -62,10 +62,37 @@ The RainFARM methodology uses a two step process:
 2. Nonlinear Filtering: This is applied to the baseline prediction, and it adds detail and makes adjustments to increase accuracy.
 This methodology works well with overall weather, and it uniquely takes into account the energy distribution of big-scale rain events.
 
-## Detailed Methodology
+## Inputs, Outputs, and Variables
 
 ### Inputs
-RainFARM can input
+RainFARM can input a course rainfall field P(X, Y, T).  This type of data can come from a few different sources, like GCMs, but it lacks the resolution at a fine scale needed for local analysis and regional studies.  X and Y represent the latitude and longitude of the grid on which data is stored, and T indicates time.  
+
+$$
+P(X, Y, T) = Input
+L_{0} <= (X,Y) <= L_{max}
+T_{0} <= T <= T_{max}
+$$
+
+The second two equations above define the range of scales for L and T.  These ranges refer to the scale of the data.  L0 and T0 are defined at the scales on which the data forecast becomes poor.  Typically, the spatial forecase becomes poor around 10-20 km, and the temporal forecast becomes poor around 2-4 hours for the types of data on which RainFARM is used.
+
+### Outputs
+
+The goal of the RainFARM package is to output a new precipitation field, written as r(x,y,t).  The new scale, lambda, will be less than the original scale, L, and typically falls around  1-2 km.  The new time scale, tau, will be less than the original time scale, T, and typically falls around 10 minutes.
+
+This output must be thought of as one potential realization of the small scale behavior of this larger system and phenomena.
+
+$$
+r(x, y, t) = output 
+\lambda_{0} < L_{0}
+\tau_{0} < T_{0}
+$$
+
+### Aggregation and Validation
+
+Interestingly, RainFARM includes its own self validation in which the output, the fine scale precipitation field, r(x,y,t), is aggregated on the original spatial and temporal scales.  This aggregated field should produce a coarse scale precipitation field, R(X, Y, T) that must be equal to the original field P.
+
+## Detailed Methodology
+
 
 # Packages
 ```{julia}
