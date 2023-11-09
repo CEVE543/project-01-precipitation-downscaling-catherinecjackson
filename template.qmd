@@ -69,7 +69,11 @@ RainFARM can input a course rainfall field P(X, Y, T).  This type of data can co
 
 $$
 P(X, Y, T) = Input
+$$
+$$
 L_{0} <= (X,Y) <= L_{max}
+$$
+$$
 T_{0} <= T <= T_{max}
 $$
 
@@ -83,7 +87,11 @@ This output must be thought of as one potential realization of the small scale b
 
 $$
 r(x, y, t) = output 
+$$
+$$
 \lambda_{0} < L_{0}
+$$
+$$
 \tau_{0} < T_{0}
 $$
 
@@ -188,12 +196,6 @@ press_2017 = NCDataset("data/raw/500hPa_geopotential_2017.nc")
 press_2018 = NCDataset("data/raw/500hPa_geopotential_2018.nc")
 press_2019 = NCDataset("data/raw/500hPa_geopotential_2019.nc")
 press_2020 = NCDataset("data/raw/500hPa_geopotential_2020.nc")
-
-display(precip_tx)
-```
-
-# Data Preprocessing
-``` {julia}
 precip_tx_p = precip_tx["precip"]
 ```
 
@@ -217,13 +219,19 @@ The first input into the function is the coarse precipitation data, or the coars
 
 Te second input is the slope.  The slope is the spatial spectral slope.  This value helps quantify the rate at which the power in the precipitation field decreases as you move to small scales in space.
 
+Code labels have been added below:
+1. RainFARM needs boolean context inputs, and any missing values will come up as "Missing," which is non-boolean.  Consequently, the "Missings" need to be removed.  To do so, the missing values were assumped to be no precipitation, so the default rain is set to 0.
+2. The default rain value of no precipitation is used to fill in the missing values.
+3. The spatial slope is set for 1.  This slope is explored in more detail later.
+4. The nf determines the ratio of coarse to fine data.  For example, if nf=5 the downscaled data will have 5 times the resolution of the original data.  It is also explored later.
+
 ```{julia}
 using RainFARM
 using DataFrames
-default_value = 0.0
-r = coalesce.(precip_tx_p, default_value)
-slope = 1;
-nf = 5;
+default_value = 0.0 # <1>
+r = coalesce.(precip_tx_p, default_value) # <2>
+slope = 1; # <3>
+nf = 5; # <4>
 downscaled_precip_tx = rainfarm(r, slope, nf)
 ```
 
@@ -287,6 +295,26 @@ end
 ```
 
 As the slope grows, there is a 'blurring' effect on the data.  The smallest slope generates the most specific estimate and is the least blurry of our predictions.  This generates an interesting question.  The available RainFARM documentation does not give many recommendations regarding this spatial slope, and the issue, therefore, becomes a question of variance.  With a small slope, there is a small rate of change the predictions are very specific and localized.  With a high slope, there is a high rate of change so the predictions become blurry and less specific.  Therefore, low slopes have low variance and high slopes have high variance.  Low variance is great when the model is accurate, but it can cause problems with generalization.  High variance can generalize well, but the accuracy is limited.  This is an important question to consnider when setting up this RainFARM model.
+
+We can also consider the ratio of coarse to fine data, or the nf variable.  This variable determines the resolution of the downscaled data.  Let's compare the graphs with different nf values.  Higher nf values correspond to a higher resolution.
+
+```{julia}
+using RainFARM
+using DataFrames
+default_value = 0.0
+randomtimestep = rand(1:8760)
+randtime_precip_tx_p = precip_tx_p[:, :, randomtimestep]
+r = coalesce.(randtime_precip_tx_p, default_value)
+for i = 1:2:30
+    slope = 1;
+    nf = i;
+    downscaled_randnf_precip_tx = rainfarm(r, slope, nf)
+    randnf_hm = heatmap(downscaled_randnf_precip_tx[:, :, 1])
+    display(randnf_hm)
+end
+```
+
+This analysis starts with nf = 1, meaning the output is the original coarse data.  As nf grows, the downscaled data becomes increasingly fine.  However, there does seem to be a potential point at which the downscaled data is not improving and increasing the ratio only serves to diminish the hotspot peaks of the precipitation.  In the heatmap, this can be seen as the downscaled patterns stop changing as much as the ratio increases, but the hotspots dim.
 
 ```{julia}
 
