@@ -44,7 +44,28 @@ Sources include the Copernicus Climate Change Service (C3S), National Oceanic an
 :::
 
 # Project
-For this project, I will be conducting a slightly different analysis than others in the class.  As I proposed to Dr. Doss-Gollin, I want to undertake a deep dive into a Julia based Downscaling Package, analyze the methods and algorithms used, apply it to 
+For this project, I will be conducting a slightly different analysis than others in the class.  As I proposed to Dr. Doss-Gollin, I want to undertake a deep dive into a Julia based Downscaling Package, RainFARM, analyze the methods and algorithms used, and apply it to the larger scale precipitation data.
+
+# RainFARM
+According to Rebora et al. (2006b), RainFARM aims to generate "an ensemble of stochastic realizations of the small-scale precipitation fields that have statistical properties similar to those measured for rainfall in a given area and/or synoptic situation."  In other words, RainFARM takes course data and downscales it to a finer scale while still keeping similar statistical properties (e.g. it presents a faithful representataion of what your data could look like on the finer scale).  However, it is important to note that it is a stochastic process, and randomness is involved.  Consequently, it is not a deterministic process, and the results will vary each time the code is run.  This is why it is important to run the code multiple times to see many different possible downscaled outcomes.
+
+## Common Rainfall Downscaling Methods Overview
+There are many different methods used for downscaling, but there are three main types used in the literature, according to the Rebora article.  These are:
+1. Point Processes
+2. Autoregressive Processes with Nonlinear Transformation: This involves using patterns from the past (autoregressive) and applying it to a static nonlinear transformation.
+3. Fractal Cascades: This creates a model where rain repeats in patterns inspired by fractals.
+However, there have been examples of people combining these methods to create hybrid models.
+
+## Methodology Outline
+The RainFARM methodology uses a two step process:
+1. Linear Autoregressive Process: The behavior of the rainfall on the course scale can be analyzed for patterns over this large area.  A simple forecast is made from this step.
+2. Nonlinear Filtering: This is applied to the baseline prediction, and it adds detail and makes adjustments to increase accuracy.
+This methodology works well with overall weather, and it uniquely takes into account the energy distribution of big-scale rain events.
+
+## Detailed Methodology
+
+### Inputs
+RainFARM can input
 
 # Packages
 ```{julia}
@@ -109,10 +130,7 @@ temp15to18                         = temp_2015to2018
 ```{julia}
 using RainFARM
 using DataFrames
-# Assume that you want to replace missing values with 0.0
 default_value = 0.0
-
-# Replace missing values in precip_tx_p with the default_value
 r = coalesce.(precip_tx_p, default_value)
 slope = 1;
 nf = 5;
@@ -121,10 +139,13 @@ downscaled_precip_tx = rainfarm(r, slope, nf)
 
 ```{julia}
 # plot one frame of the downscaled_precip_tx
-timeframe = 7
-downheatmap = heatmap(downscaled_precip_tx[:, :, timeframe])
-origheatmap = heatmap(precip_tx_p[:, :, timeframe])
-plot(downheatmap, origheatmap, layout = (1, 2), legend = false)
+for i = 1:500:8760
+    timeframe = i
+    downheatmap = heatmap(downscaled_precip_tx[:, :, timeframe])
+    origheatmap = heatmap(precip_tx_p[:, :, timeframe])
+    cumplot = plot(downheatmap, origheatmap, layout = (1, 2), legend = true)
+    display(cumplot)
+end
 ```
 
 ```{julia}
