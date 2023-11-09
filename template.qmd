@@ -119,6 +119,16 @@ nf = 5;
 downscaled_precip_tx = rainfarm(r, slope, nf)
 ```
 
+```{julia}
+# plot one frame of the downscaled_precip_tx
+timeframe = 7
+downheatmap = heatmap(downscaled_precip_tx[:, :, timeframe])
+origheatmap = heatmap(precip_tx_p[:, :, timeframe])
+plot(downheatmap, origheatmap, layout = (1, 2), legend = false)
+```
+
+```{julia}
+
 # Quantile Quantile Mapping
 Quantile-Quantile Mapping, or Q-Q Mapping, can be used to downscale climate data. This method is used to adjust the distribution of a variable to match the distribution of another variable. In this case, we are using Q-Q Mapping to adjust the distribution of the precipitation data to match the observed temperature data.  Temperature data tends to be smoother and more reliable than precipitation data, so we are using the temperature data as a reference to adjust the precipitation data.
 
