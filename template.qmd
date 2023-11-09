@@ -198,6 +198,8 @@ press_2018 = NCDataset("data/raw/500hPa_geopotential_2018.nc")
 press_2019 = NCDataset("data/raw/500hPa_geopotential_2019.nc")
 press_2020 = NCDataset("data/raw/500hPa_geopotential_2020.nc")
 precip_tx_p = precip_tx["precip"]
+
+display(precip_tx)
 ```
 
 Now inputs to the RainFARM function must be determined, and they are informed by information from the methodology.
