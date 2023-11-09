@@ -201,14 +201,14 @@ precip_tx_p = precip_tx["precip"]
 # combine all temp files so there is a continuous time variable
 # select the first 8760 hours of the 2016 data t2m
 # 2016 is a leap year so it has 8784 hours
-temp_2016 = temp_2016[:, :, 1:8760];
+#temp_2016 = temp_2016[:, :, 1:8760];
 # create an empty matrix with dimensions 66, 27, 34680
-temp_2015to2018                    = zeros(66, 27, 34680)
-temp_2015to2018[:, :, 1:8760]      = temp_2015
-temp_2015to2018[:, :, 8761:17340]  = temp_2016
-temp_2015to2018[:, :, 17341:26010] = temp_2017
-temp_2015to2018[:, :, 26011:34680] = temp_2018
-temp15to18                         = temp_2015to2018
+#temp_2015to2018                    = zeros(66, 27, 34680)
+#temp_2015to2018[:, :, 1:8760]      = temp_2015
+#temp_2015to2018[:, :, 8761:17340]  = temp_2016
+#temp_2015to2018[:, :, 17341:26010] = temp_2017
+#temp_2015to2018[:, :, 26011:34680] = temp_2018
+#temp15to18                         = temp_2015to2018
 ```
 
 Now inputs to the RainFARM function must be determined, and they are informed by information from the methodology.
@@ -267,6 +267,27 @@ stoch2_hm = heatmap(downscaled_stoch2_precip_tx[:, :, 1])
 cumplot = plot(stoch1_hm, stoch2_hm, layout = (1, 2), legend = true)
 ```
 
+
+However, another interesting thing to analyze is the determination of the spatial slope factor.  This is an important component of our frequency analysis of the energy/precipitation in the system and how fast is changes.  Let's compare the graphs with different spatial slopes.  Higher spatial slopes correspond to a faster rate of change.
+
+```{julia}
+using RainFARM
+using DataFrames
+default_value = 0.0
+randomtimestep = rand(1:8760)
+randtime_precip_tx_p = precip_tx_p[:, :, randomtimestep]
+r = coalesce.(randtime_precip_tx_p, default_value)
+for i = 0.5:0.5:7
+    slope = i;
+    nf = 5;
+    downscaled_randslope_precip_tx = rainfarm(r, slope, nf)
+    randtime_hm = heatmap(downscaled_randslope_precip_tx[:, :, 1])
+    display(randtime_hm)
+end
+```
+
+As the slope grows, there is a 'blurring' effect on the data.  The smallest slope generates the most specific estimate and is the least blurry of our predictions.  This generates an interesting question.  The available RainFARM documentation does not give many recommendations regarding this spatial slope, and the issue, therefore, becomes a question of variance.  With a small slope, there is a small rate of change the predictions are very specific and localized.  With a high slope, there is a high rate of change so the predictions become blurry and less specific.  Therefore, low slopes have low variance and high slopes have high variance.  Low variance is great when the model is accurate, but it can cause problems with generalization.  High variance can generalize well, but the accuracy is limited.  This is an important question to consnider when setting up this RainFARM model.
+
 ```{julia}
 
 # Quantile Quantile Mapping
@@ -317,28 +338,3 @@ The Lab 06 methodology is as follows:
 
 ## Implementation
 The Lab 06 methodology was implemented in Julia using the following code:
-
-```{julia}
-# Assuming `precip` is your precipitation data variable
-# Dimensions: lon × lat × time
-
-# Create an empty array to store data without missing values
-cleaned_precip_tx = Float32[]
-# Loop through the time dimension
-for t = 1:8760
-    # Extract a 2D slice at time t
-    slice = precip_tx[:, :, t]
-    # Filter out missing values from the 2D slice
-    #cleaned_slice = filter(x -> !ismissing(x), slice)
-    # Append the cleaned slice to the cleaned_precip array
-    #append!(cleaned_precip_tx, cleaned_slice)
-end
-
-# Calculate the new dimensions after removing missing values
-#new_lon, new_lat, new_time = size(precip_tx)
-
-# Reshape the cleaned data to match the original dimensions
-#cleaned_precip_tx = reshape(cleaned_precip_tx, new_lon, new_lat, new_time)
-
-# Now, `cleaned_precip` contains your data with missing values removed
-```
