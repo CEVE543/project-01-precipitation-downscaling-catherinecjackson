@@ -103,7 +103,6 @@ Interestingly, RainFARM includes its own self validation in which the output, th
 ## Detailed Methodology
 
 ### Power Spectrum
-Spectral analysis is 
 The paper first describes the estimation of the space-time power spectrum of the field P.  This space-time power spectrum can be thought of as the energy distribution of the field P.  It helps describe how precipitation is generated across space and time, and is frequency used in meteorology.
 
 More specifically, power spectrums are often estimated (as the distribution of power contained within the signal over frequency) because the frequency-domain representation of the signal is often easier to analyze than the time-domain representation.
@@ -186,6 +185,7 @@ using NCDatasets
 using RainFARM
 using DataFrames
 using GLM
+using FFTW
 ```
 
 # Downloading Data
@@ -229,6 +229,27 @@ r = coalesce.(precip_tx_p, default_value) # <2>
 slope = 1; # <3>
 nf = 5; # <4>
 downscaled_precip_tx = rainfarm(r, slope, nf)
+```
+
+```{julia}
+randomtime = rand(1:8760)
+oneslice = precip_tx_p[:,:,randomtime]
+default_value = 0.0 # <1>
+r = coalesce.(oneslice, default_value) # <2>
+plot()
+for i = 1:13
+    t0 = 0
+    fs = 24-1
+    tmax = 1
+    t = t0:1/fs:tmax;
+    signal = r[i,:]
+    F = fftshift(fft(signal))
+    freqs = fftshift(fftfreq(length(t),fs))
+    time_domain = plot(t, signal, title = "One Row of Downscaled Precipitation Data at t = 1", xlabel="Time")
+    freq_domain = plot!(freqs, abs.(F), title = "Fourier Transform of One Row of Precipitation Data at t=1", xlabel="Frequency")
+    global fourierplot = plot!(time_domain, freq_domain, layout = (2,1), legend=false)
+end
+display(fourierplot)
 ```
 
 This created a variable, downscaled_precip_tx, with the downscaled precipitation data over the same time period of the original precipitation data.
@@ -329,9 +350,25 @@ for i = 1:120
     global emptyquantiletrack[:, i] = quantile(emptymatrixslice[:, i], [0.25, 0.5, 0.75])
 end
 
-plot(emptyquantiletrack[1, :], label = "25th Percentile")
-plot!(emptyquantiletrack[2, :], label = "50th Percentile")
-plot!(emptyquantiletrack[3, :], label = "75th Percentile")
+quantileplot = plot(emptyquantiletrack[1, :], label = "25th Percentile")
+quantileplot = plot!(emptyquantiletrack[2, :], label = "50th Percentile")
+quantileplot = plot!(emptyquantiletrack[3, :], label = "75th Percentile")
+
+display(quantileplot)
+
+
+randtime = rand(1:8760)
+xs = 1:120
+ys = 1:120
+zs = downscaled_stoch1_precip_tx[:,:,1]
+sur1 = surface(xs, ys, zs)
+
+xs = 1:120
+ys = 1:120
+zs = downscaled_stoch2_precip_tx[:,:,1]
+sur2 = surface(xs, ys, zs)
+
+display(plot!(sur1, sur2, layout = (1, 2), legend = true))
 ```
 
 However, another interesting thing to analyze is the determination of the spatial slope factor.  This is an important component of our frequency analysis of the energy/precipitation in the system and how large this rate of change is.  Let's compare the graphs with different spatial slopes.  Higher spatial slopes correspond to a faster rate of change.
@@ -354,6 +391,21 @@ for i = 0.5:0.5:7 # <1>
     randtime_hm = heatmap(downscaled_randslope_precip_tx[:, :, 1]) # <3>
     display(randtime_hm)
 end
+
+slopedownscale1 = rainfarm(r,0.1,nf)
+slopedownscale2 = rainfarm(r,20,nf)
+
+xs = 1:120
+ys = 1:120
+zs = slopedownscale1[:,:,1]
+sur1 = surface(xs, ys, zs)
+
+xs = 1:120
+ys = 1:120
+zs = slopedownscale2[:,:,1]
+sur2 = surface(xs, ys, zs)
+
+display(plot!(sur1, sur2, layout = (1, 2), legend = true))
 ```
 
 As the slope grows, there is a 'blurring' effect on the data.  The smallest slope generates the most specific estimate and is the least blurry of our predictions.  This generates an interesting question.  The available RainFARM documentation does not give many recommendations regarding this spatial slope, and the issue, therefore, becomes a question of variance.  With a small slope, there is a small rate of change the predictions are very specific and localized.  With a high slope, there is a high rate of change so the predictions become blurry and less specific.  Therefore, low slopes have low variance and high slopes have high variance.  Low variance is great when the model is accurate, but it can cause problems with generalization.  High variance can generalize well, but the accuracy is limited.  This is an important question to consnider when setting up this RainFARM model.
