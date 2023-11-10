@@ -205,8 +205,8 @@ press_2019 = NCDataset("data/raw/500hPa_geopotential_2019.nc")
 press_2020 = NCDataset("data/raw/500hPa_geopotential_2020.nc")
 precip_tx_p = precip_tx["precip"]
 precip_tx_2015 = precip_tx_p[:, :, 13149:13513]
-
-temp_2015
+default_value = 0.0 # <1>
+filled_precip_tx_p = coalesce.(precip_tx_p, default_value)
 ```
 
 Now inputs to the RainFARM function must be determined, and they are informed by information from the methodology.
@@ -217,32 +217,31 @@ Te second input is the slope.  The slope is the spatial spectral slope.  This va
 
 Code labels have been added below:
 1. RainFARM needs boolean context inputs, and any missing values will come up as "Missing," which is non-boolean.  Consequently, the "Missings" need to be removed.  To do so, the missing values were assumped to be no precipitation, so the default rain is set to 0.
-2. The default rain value of no precipitation is used to fill in the missing values.
+2. The default rain value of no precipitation is used to fill in the missing values.  This is the field fed into the function.
 3. The spatial slope is set for 1.  This slope is explored in more detail later.
 4. The nf determines the ratio of coarse to fine data.  For example, if nf=5 the downscaled data will have 5 times the resolution of the original data.  It is also explored later.
 
 ```{julia}
 using RainFARM
 using DataFrames
-default_value = 0.0 # <1>
-r = coalesce.(precip_tx_p, default_value) # <2>
 slope = 1; # <3>
 nf = 5; # <4>
-downscaled_precip_tx = rainfarm(r, slope, nf)
+r = filled_precip_tx_p; # <2>
+global downscaled_precip_tx = rainfarm(r, slope, nf)
 ```
 
-```{julia}
+```julia
 randomtime = rand(1:8760)
-oneslice = precip_tx_p[:,:,randomtime]
 default_value = 0.0 # <1>
-r = coalesce.(oneslice, default_value) # <2>
+fill_precip_tx_p = coalesce.(precip_tx_p, default_value) # <2>
+oneslice = fill_precip_tx_p[:,:,randomtime]
 plot()
 for i = 1:13
     t0 = 0
     fs = 24-1
     tmax = 1
     t = t0:1/fs:tmax;
-    signal = r[i,:]
+    signal = oneslice[i,:]
     F = fftshift(fft(signal))
     freqs = fftshift(fftfreq(length(t),fs))
     time_domain = plot(t, signal, title = "One Row of Downscaled Precipitation Data at t = 1", xlabel="Time")
@@ -276,8 +275,6 @@ Visually, these side-by-side comparisons show reasonable results for the downsca
 You can also see this three-dimensionally.  Below, the plots show the downscaled data plotted on the grid. 
 
 ```{julia}
-default_value = 0.0 # <1>
-precip_tx_p = coalesce.(precip_tx_p, default_value) # <2>
 for i = 1:3
     randtime = rand(1:8760)
     xs = 1:120
@@ -287,7 +284,7 @@ for i = 1:3
 
     xs = 1:24
     ys = 1:24
-    zs = precip_tx_p[:,:,randtime]
+    zs = fill_precip_tx_p[:,:,randtime]
     sur2 = surface(xs, ys, zs)
 
     display(plot!(sur1, sur2, layout = (1, 2), legend = true))
@@ -307,10 +304,8 @@ The code below will generate a random time step and then run the downscaling fun
 ```{julia}
 using RainFARM
 using DataFrames
-default_value = 0.0
 randomtimestep = rand(1:8760) # <1>
-stoch_precip_tx_p = precip_tx_p[:, :, randomtimestep] # <2>
-r = coalesce.(stoch_precip_tx_p, default_value) # <3>
+stoch_precip_tx_p = fill_precip_tx_p[:, :, randomtimestep] # <2>
 slope = 1;
 nf = 5;
 downscaled_stoch1_precip_tx = rainfarm(r, slope, nf) # <4>
@@ -434,5 +429,7 @@ end
 ```
 
 This analysis starts with nf = 1, meaning the output is the original coarse data.  As nf grows, the downscaled data becomes increasingly fine.  However, there does seem to be a potential point at which the downscaled data is not improving and increasing the ratio only serves to diminish the hotspot peaks of the precipitation.  In the heatmap, this can be seen as the downscaled patterns stop changing as much as the ratio increases, but the hotspots dim.  This is another important question to consider when setting up this RainFARM model.
+
+amplitudes are non-gaussian though the processes are gaussian.
 
 
