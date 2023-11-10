@@ -246,7 +246,7 @@ for i = 1:13
     F = fftshift(fft(signal))
     freqs = fftshift(fftfreq(length(t),fs))
     time_domain = plot(t, signal, title = "One Row of Downscaled Precipitation Data at t = 1", xlabel="Time")
-    freq_domain = plot!(freqs, abs.(F), title = "Fourier Transform of One Row of Precipitation Data at t=1", xlabel="Frequency")
+    freq_domain = plot(freqs, abs.(F), title = "Fourier Transform of One Row of Precipitation Data at t=1", xlabel="Frequency")
     global fourierplot = plot!(time_domain, freq_domain, layout = (2,1), legend=false)
 end
 display(fourierplot)
