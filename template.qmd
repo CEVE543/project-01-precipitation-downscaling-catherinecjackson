@@ -276,6 +276,8 @@ Visually, these side-by-side comparisons show reasonable results for the downsca
 You can also see this three-dimensionally.  Below, the plots show the downscaled data plotted on the grid. 
 
 ```{julia}
+default_value = 0.0 # <1>
+precip_tx_p = coalesce.(precip_tx_p, default_value) # <2>
 for i = 1:3
     randtime = rand(1:8760)
     xs = 1:120
