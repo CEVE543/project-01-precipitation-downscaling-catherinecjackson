@@ -482,6 +482,15 @@ end
 
 This analysis starts with nf = 1, meaning the output is the original coarse data.  As nf grows, the downscaled data becomes increasingly fine.  However, there does seem to be a potential point at which the downscaled data is not improving and increasing the ratio only serves to diminish the hotspot peaks of the precipitation.  In the heatmap, this can be seen as the downscaled patterns stop changing as much as the ratio increases, but the hotspots dim.  This is another important question to consider when setting up this RainFARM model.
 
+# Conclusions
 
+## Considerations
 
+Spatial Slope: The choice of spatial slope introduces a trade-off between specificity and generalization. Low slopes provide specific but localized estimates, while high slopes result in more generalized but blurry predictions.
 
+Coarse to Fine Ratio (nf): The analysis indicates a potential point of diminishing returns for increasing the ratio, where fine-scale details may be lost.
+Recommendations:
+
+## Model Performance
+
+The RainFARM Model seemed to make good predictions and acknowledges the sources of error in precipitation data.  These stocastic predictions represent the statistical trends of the coarse data well.  I believe it is a useful model, and I hope to use it for my thesis later!
