@@ -30,12 +30,12 @@ format:
 Global Climate Models, also referred to as GCMs, are incredibly valuable tools in that they can capture large scale climate dynamics (e.g. future greenhouse gas concentration over the entire Earth).  Furthermore, many of these phenomena must be studied at a global scale.  However, there are limitations to GCMs.  Primarily, given the large scale analysis, grid cells and computation points for these models are actually quite large.  This leads to problems when trying to study local phenomena, such as the climate of a specific city or region.  This is when downscaling must be used.  There are two types of downscaling: Dynamical and Statistical. 
 
 ### Dynamical Downscaling
-This type of downscaling uses a Regional Climate Model (RCM) which takes in the output of a GCM as a boundary condition.  Then, RCM use these boundary conditions and physical principles to generate higher resolution local climate.  However, thse are computationally expensive.
+This type of downscaling uses a Regional Climate Model (RCM) which takes in the output of a GCM as a boundary condition.  Then, RCM use these boundary conditions and physical principles to generate higher resolution local climate.  However, these are computationally expensive.
 
 ### Statistical Downscaling
 Statistical Downscaling is another common method dependent on the availability of local weather data, such as precipitation.  A statistical relationship is developed between the historic observed climate data and the output of the climate model for the same historical period.  Then, this statistical relationship is used to downscale the climate model output to the local scale.  This can be combined with bias correction and adjustment to improve the accuracy of the downscaled data.
 
-For this project, we will be using statistical downscaling in that we will attempt to determine a relationship between global predictors like temperature and pressure and local precipitation.  Then, we will use this relationship to downscale the precipitation data.
+For this project, I will be using statistical downscaling.  I will use a Julia package, RainFARM, to downscale coarse precipitation data to a finer scale.
 
 ### Statistical Downscaling Methods
 Statistical Downscaling, SD, consists of a identified historical period (calibration) used to analyze the predictor/predictand relationship.  This relationship is then applied to predictors from the GCMs to get the local climate projections. 
@@ -61,7 +61,7 @@ However, there have been examples of people combining these methods to create hy
 The RainFARM methodology uses a two step process:
 1. Linear Autoregressive Process: The behavior of the rainfall on the course scale can be analyzed for patterns over this large area.  A simple forecast is made from this step.
 2. Nonlinear Filtering: This is applied to the baseline prediction, and it adds detail and makes adjustments to increase accuracy.
-This methodology works well with overall weather, and it uniquely takes into account the energy distribution of big-scale rain events.
+This methodology works well with overall weather patterns.
 
 ## Inputs, Outputs, and Variables
 
@@ -78,7 +78,7 @@ $$
 T_{0} <= T <= T_{max}
 $$
 
-The second two equations above define the range of scales for L and T.  These ranges refer to the scale of the data.  L0 and T0 are defined at the scales on which the data forecast becomes poor.  Typically, the spatial forecase becomes poor around 10-20 km, and the temporal forecast becomes poor around 2-4 hours for the types of data on which RainFARM is used.
+The second two equations above define the range of scales for L and T.  These ranges refer to the scale of the data.  L0 and T0 are defined at the scales on which the data forecast becomes poor.  Typically, the spatial forecase becomes poor around 10-20 km, and the temporal forecast becomes poor around 2-4 hours (for the types of data on which RainFARM is used).
 
 ### Outputs
 
@@ -102,16 +102,28 @@ Interestingly, RainFARM includes its own self validation in which the output, th
 
 ## Detailed Methodology
 
-### Power Spectrum
-The paper first describes the estimation of the space-time power spectrum of the field P.  This space-time power spectrum can be thought of as the energy distribution of the field P.  It helps describe how precipitation is generated across space and time, and is frequency used in meteorology.
+### Fourier Analysis & Power Spectrum
+The Rebora paper first describes the estimation of the space-time power spectrum of the field P.  This space-time power spectrum can be thought of as the power distribution of the field P.  It helps describe how precipitation is generated across space and time, and is frequency used in meteorology.
 
-More specifically, power spectrums are often estimated (as the distribution of power contained within the signal over frequency) because the frequency-domain representation of the signal is often easier to analyze than the time-domain representation.
+To better understand this, we can go into more detail on both Fourier analysis and Power Spectra.
+
+#### Fourier Analysis
+Fourier Analysis was first developed by French mathematician Joseph Fourier.  It is a mathematical tool that can break down complex signals into a sum of simpler sinusoidal (wave-like) functions.  Consider, for example, a recording of a song.  Fourier Analysis could isolate the individual notes that make up the song by analyzing the frequency components.  
+
+Fourier analysis itself is complex, but it can be considered a method to break down complex components into simpler ones.  Therefore, we can analyze the complex patterns within the precipitation field and break them down into frequency components we can analyze easily.
+
+It is also important to note that these frequency components have an associated power which tells us how impactful they are in the system.  This is where the power spectrum comes in.
+
+#### Power Spectra
+The power spectrum Sxx(f) of a time series x(t) describes the distribution of power into frequency components composing that signal.  The statistical average of any sort of signal as analyzed in terms of its frequency content is its spectrum.  This is frequently done as analysis over a frequency-domain representation is easier to analyze than a time-domain representation.
+
+Below, I go through the steps of the RainFARM methodology set up in the Rebora paper.  First, the space-time power spectrum is defined, and Ky and Kx represent wave numbers and Omega represents angular frequency.  The Nyquist Number is also defined, and it is the maximum frequency that can be represented given the sampling frequency.  This is important because it defines the limitations of the analysis.
 
 $$
 |\hat{P}(K_{X}, K_{Y},\Omega|^2 = space \space time \space power \space spectrum
 $$
 $$
-K_{X} and K_{Y} = wavenumbers \space in \space X \space and \space Y \space directions
+K_{X} \space and \space K_{Y} = wavenumbers \space in \space X \space and \space Y \space directions
 $$
 $$
 \Omega = angular \space frequency
@@ -123,46 +135,47 @@ $$
 \Omega <= pi/T_{0} = Nyquest \space Frequency
 $$
 
-One of the first discussions of this new atmospheric energy balance methodology is in Equations Governing the Energetics of the Larger Scales of Atmospheric Turbulence in the Domain of Wave Number written by Barry Saltsman in 1957.  This paper took the previous understanding of turbulence and atmospheric energy, based heavily on Fourier analysis, and used to extend the "Reynolds formulation of the turbulence problem into the domain of scale."  Importantly, "such an approach makes it possible to investigate the energetics of the atmospheric disturbances directly from daily observational data."  In other words, a precipitation field P can be analyzed with this space time power spectrum analysis to determine the energy dynamics of the atmosphere.
+So we have an equation for the space time power spectrum above.  In addition, we have representations of our wavenumbers where the wavenumbers are the components of a wavevector along the x and y directions in the case of a two-dimensional setting.  Wavenumbers can be thought of as the spatial frequency of a wave.  In other words, the wavenumbers allow for a representation of the spatial frequency of these energy waves.  K(X) and K(Y) represent how these precipitation patterns vary in the X and Y directions.  However, the Nyquist Number defines the limitations of our understanding, but an in-depth discussion of this determination is outside the scope of this work.
 
-The wavenumbers allow for a representation of the spatial frequency of these energy waves.  K(X) and K(Y) represent how these precipitation patterns (and energy) vary in the X and Y directions.  However, the Nyquist Number defines the limitations of our understanding, but an in-depth discussion of this determination is outside the scope of this work.
+The angular frequency, in the general theory, measures how fast the waves oscillate in time.  In other words, it represents how fast the pattern changes, so for RainFARM it represents how quickly the precipitation patterns change.  Again, the Nyquist Frequency defines the limitations of the analysis.
 
-The angular frequency, in the general theory, measures how fast the waves oscillate in time.  In other words, it represents how fast the pattern changes, so for RainFARM it represents how quickly the precipitation patterns change.  Again, the Nyquist Frequency defiiines the limitations of the analysis.
+### Downscale Power Spectrum
+Next, the power spectrum is extrapolated to small scales.  In this way, the downscaling occurs in the frequency domain not the spatial domain.  This is done through the assumption of a power-law behavior.
 
-Next, the power spectrum is extrapolated to small scales.  Rebora describes that a power-law behavior is assumed; in other words, the the power relationships of the coarse data are assumped proportional to the power relationships of the fine data.  This allows for a relationship between the coarse and fine data to be determined.  In addition, the logarithmic slopes \alpha and \beta represent the spatial slope and the temporal slope, respectively.  These help determine the rate at which the energy/precipitation changes based on these variables.  In other words, we define a rate of change.
+#### Power-Law Behavior
+According to a helpful Wikipedia, a power-law behavior is a "functional relationship between two quantities where a relative change in one quantity results in a relative change in the other quantity proportional to a power of the change, independent of the initial size of those quantities: one quantity varies as a power of another."  This may appear to be a large assumption, but certain studies (e.g. Ferraris et al. 2003a, b) have shown that a power-law behavior is a reasonable assumption for precipitation fields.
 
-The model assumpes isotropy, meaning that the precipitation field will behave uniformly in all spatial directions.  This uniform behavior in all directions lessens the computational load and simplifies the model.
+#### Slopes
+Once we have a downscaled precipitation field (using the assumption that there is aa functional relationship between the coarse precipitation field and the fine field in the frequency domain), the spatial and temporal logarithmic slopes of the power spectrum, which we call α and β, are defined. These slopes express the rate at which the power of the frequency components changes with respect to space and time.  For example, a high spatial logarithmic slope means that the power dynamics can chanage quickly as you move across the field.  In addition, isotropy is assumed in the two spatial directions.  This is also a valid assumption with precipitation. This uniform behavior in all directions lessens the computational load and simplifies the model.
 
-A Fourier spectrum is defined:
+### Fourier Spectrum Inversion
+We have been conducting analysis in the frequency domain, but another useful product of Fourier Analysis is that this analysis can be inverted to change back into the space time domain.  This can be broken up into the definition of the Fourier Spectrum, the Power Spectrum, and the Inversion.
+
+A Fourier spectrum is defined below. This Fourier analysis lends itself to an exploration of the frequency components of the data and a consequent modeling of the distribution of power across frequencies.
 
 $$
 \hat{g}(k_{x},k_{y},\omega) = |\hat{g}(k_{x}, k{y}, \omega)|e^{i\phi}
 $$
 
-This Fourier analysis lends itself to an exploration of the frequency components of the data and a consequent modeling of the distribution of power across frequencies.  An inversion creates a Gaussian field that represents the original data in space time.  The more-specific steps are listed below:
-
-1. Fourier Spectrum: This breaks our power spectrum into its frequency components.  A functional form becomes the equation shown below.  Notice it is dependent on the wavenumbers and the angular frequency, discussed earlier.
+A Power spectrum is defined below.  This functional equation allows us to describe the power spectrum in a mathematical form.  
 
 $$
 |\hat{g}(k_{x}, k{y}, \omega)|^2 \propto (k_{x}^2 + k_{y}^2)^{-\alpha/2} \omega^{-\beta}
 $$
 
-2. Form for Power Spectrum: This allows us to describe the power spectrum in a mathematical form.  This gives predictive power.
+The next step is inversion. The power spectrum can be inverted to generate a Gaussian field that represents the data in space time.  A Gaussian field is a random field involving Gaussian probability density functions of the variables.  Gaussian fields are often used to model random processes that vary smoothly in space or time. 
 
-3. Inversion: The frequency domain, with our predictive power given the equation governing power spectra, can be inverted to generate a Gaussian field that represents the original data in space time.
-
-4. Normalization
-
-At this point in the process, (1) a coarse data field has been taken in, (2) a power spectrum has been generated to represent the energy/precipitation in the atmosphere, (3)  the power spectrum is extrapolated to smaller scales with the assumption of power-law behavior, (4) fourier spectrum are used to create a function that represents this downscaled power spectrum and then inverted to create a gaussian field that brings the downscaled data back to a space time field.
-
-Next, a precipitation field is generated by taking "a nonlinear transformation of the Gaussian field g" (Rebora et al., 2006b).  The transformation is defind as:
+### Generate a Precipitation Field
+Finally, a nonlinear transformation, defined below, is applied to all points in the Gaussian field g.  This produces a synthetic precipitation field r(x, y, t). 
 
 $$
-\tilde{r}(x,y,t) = exp[g(x,y,t)]
+\tilde{r}=exp[g(x,y,t)]
 $$
 
+Unfortunately, no documentation online gives the rational for selecting this method of nonlinear transformation.  However, it is a relatively simple nonlinear transformation which minimizes computational load.
 
-Notice that this transformation is an exponential function applied to our Gaussian field (e.g. the space time field of the downscaled data), so it creates a lognormal field.  This is a nonlinear transformation, and it is applied to the Gaussian field to create the precipitation field.  
+### Summary and Validation
+At this point in the process, (1) a coarse data field has been taken in, (2) a power spectrum has been generated to represent the energy/precipitation in the atmosphere, (3)  the power spectrum is extrapolated to smaller scales with the assumption of power-law behavior, (4) fourier spectrum are used to create a function that represents this downscaled power spectrum and then inverted to create a gaussian field that brings the downscaled data back to a space time field. Finally, a precipitation field is generated by taking "a nonlinear transformation of the Gaussian field g" (Rebora et al., 2006b). 
 
 As mentioned earlier, there is an internal validation step in which the generated (or synthetic) precipitation field is compared to the original field.  This is done by aggregating the synthetic field to the original scale; in other words, the small scale field is aggregated to L0 and T0.
 
@@ -180,8 +193,6 @@ using Distributions
 using Statistics
 using CDSAPI
 using NCDatasets
-using StatsBase: shuffle
-using NCDatasets
 using RainFARM
 using DataFrames
 using GLM
@@ -191,31 +202,21 @@ using FFTW
 # Downloading Data
 ```{julia}
 precip_tx = NCDataset("data/precip_tx.nc")
-temp_2015 = NCDataset("data/raw/2m_temperature_2015.nc")
-temp_2016 = NCDataset("data/raw/2m_temperature_2016.nc")
-temp_2017 = NCDataset("data/raw/2m_temperature_2017.nc")
-temp_2018 = NCDataset("data/raw/2m_temperature_2018.nc")
-temp_2019 = NCDataset("data/raw/2m_temperature_2019.nc")
-temp_2020 = NCDataset("data/raw/2m_temperature_2020.nc")
-press_2015 = NCDataset("data/raw/500hPa_geopotential_2015.nc")
-press_2016 = NCDataset("data/raw/500hPa_geopotential_2016.nc")
-press_2017 = NCDataset("data/raw/500hPa_geopotential_2017.nc")
-press_2018 = NCDataset("data/raw/500hPa_geopotential_2018.nc")
-press_2019 = NCDataset("data/raw/500hPa_geopotential_2019.nc")
-press_2020 = NCDataset("data/raw/500hPa_geopotential_2020.nc")
 precip_tx_p = precip_tx["precip"]
-precip_tx_2015 = precip_tx_p[:, :, 13149:13513]
-default_value = 0.0 # <1>
-filled_precip_tx_p = coalesce.(precip_tx_p, default_value)
+filled_precip_tx_p = coalesce.(precip_tx_p,0)
 ```
 
+# Running the RainFARM Function
 Now inputs to the RainFARM function must be determined, and they are informed by information from the methodology.
 
 The first input into the function is the coarse precipitation data, or the coarse data P(X, Y, T).  In this case, the coarse data is the precipitation over Texas.
 
 Te second input is the slope.  The slope is the spatial spectral slope.  This value helps quantify the rate at which the power in the precipitation field decreases as you move to small scales in space.
 
-Code labels have been added below:
+The final input is nf, which is the ratio of coarse to fine data.  For example, if nf=5 the downscaled data will have 5 times the resolution of the original data.
+
+Below, the RainFARM function is called on the precipitation data. Code labels have been added below:
+
 1. RainFARM needs boolean context inputs, and any missing values will come up as "Missing," which is non-boolean.  Consequently, the "Missings" need to be removed.  To do so, the missing values were assumped to be no precipitation, so the default rain is set to 0.
 2. The default rain value of no precipitation is used to fill in the missing values.  This is the field fed into the function.
 3. The spatial slope is set for 1.  This slope is explored in more detail later.
@@ -230,11 +231,44 @@ r = filled_precip_tx_p; # <2>
 global downscaled_precip_tx = rainfarm(r, slope, nf)
 ```
 
-```julia
+This created a variable, downscaled_precip_tx, with the downscaled precipitation data over the same time period of the original precipitation data.
+
+# Fourier Analysis in Code
+I have included some examples of how the Fourier Analysis is used to help better understand the methodology used in the rainfarm package.  
+
+The first example is an example created off of a randomly generated sin wave with multiple frequency components.
+
+```{julia}
+using FFTW
+using Plots
+
+t0 = 0              # Start time 
+fs = 44100          # Sampling rate (Hz)
+tmax = 0.1          # End time       
+
+randfreq1 = rand(1:90)
+randfreq2 = rand(1:90)
+
+t = t0:1/fs:tmax;   
+signal = sin.(2π * randfreq1 .* t) + sin.(2π * randfreq2 .* t) # Signal
+
+F = fftshift(fft(signal))
+freqs = fftshift(fftfreq(length(t), fs))
+
+# plots 
+time_domain = plot(t, signal, title = "Signal", label="f = sin(2pi $randfreq1 t) + sin(2pi $randfreq2 t)",legend=:top)
+freq_domain = plot(freqs, abs.(F), title = "Spectrum", xlim=(0, +100), xticks=-0:20:100, label="Frequency Components",legend=:top) 
+freq_domain = vline!([randfreq1], label=false)
+freq_domain = vline!([randfreq2], label=false, color=:red)
+plot(time_domain, freq_domain, layout = (2,1))
+```
+
+This next example selects a random row and time step in our precipitation field to visualize how the Fourier transform is applied to the data we have.
+
+```{julia}
 randomtime = rand(1:8760)
 default_value = 0.0 # <1>
-fill_precip_tx_p = coalesce.(precip_tx_p, default_value) # <2>
-oneslice = fill_precip_tx_p[:,:,randomtime]
+oneslice = filled_precip_tx_p[:,:,randomtime]
 plot()
 for i = 1:13
     t0 = 0
@@ -251,8 +285,9 @@ end
 display(fourierplot)
 ```
 
-This created a variable, downscaled_precip_tx, with the downscaled precipitation data over the same time period of the original precipitation data.
+# Results Analysis
 
+## Coarse Input vs. Fine Output
 First, it is possible to analyze the original, coarse data and the downscaled data side by side.  This can be done by plotting the data at a specific time frame.  Consider 10 randomly selected precipitation fields.
 
 1. Generate 10 random time frames from our downscaled data.
@@ -284,7 +319,7 @@ for i = 1:3
 
     xs = 1:24
     ys = 1:24
-    zs = fill_precip_tx_p[:,:,randtime]
+    zs = filled_precip_tx_p[:,:,randtime]
     sur2 = surface(xs, ys, zs)
 
     display(plot!(sur1, sur2, layout = (1, 2), legend = true))
@@ -305,11 +340,11 @@ The code below will generate a random time step and then run the downscaling fun
 using RainFARM
 using DataFrames
 randomtimestep = rand(1:8760) # <1>
-stoch_precip_tx_p = fill_precip_tx_p[:, :, randomtimestep] # <2>
+stoch_precip_tx_p = filled_precip_tx_p[:, :, randomtimestep] # <2>
 slope = 1;
 nf = 5;
-downscaled_stoch1_precip_tx = rainfarm(r, slope, nf) # <4>
-downscaled_stoch2_precip_tx = rainfarm(r, slope, nf) # <4>
+downscaled_stoch1_precip_tx = rainfarm(stoch_precip_tx_p, slope, nf) # <4>
+downscaled_stoch2_precip_tx = rainfarm(stoch_precip_tx_p, slope, nf) # <4>
 stoch1_hm = heatmap(downscaled_stoch1_precip_tx[:, :, 1])
 stoch2_hm = heatmap(downscaled_stoch2_precip_tx[:, :, 1])
 cumplot = plot(stoch1_hm, stoch2_hm, layout = (1, 2), legend = true) # <5>
@@ -323,8 +358,7 @@ using DataFrames
 plot()
 default_value = 0.0
 randomtimestep = rand(1:8760) # <1>
-stoch_precip_tx_p = precip_tx_p[:, :, randomtimestep] # <2>
-r = coalesce.(stoch_precip_tx_p, default_value) # <3>
+r = filled_precip_tx_p[:, :, randomtimestep] # <2>
 slope = 1;
 nf = 5;
 downscaled_stoch1_precip_tx = rainfarm(r, slope, nf) # <4>
