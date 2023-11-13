@@ -24,7 +24,7 @@ format:
         fig-format: png
 ---
 
-# Intro
+# Executive Summary
 
 ## Statistical and Dynamical Downscaling
 Global Climate Models, also referred to as GCMs, are incredibly valuable tools in that they can capture large scale climate dynamics (e.g. future greenhouse gas concentration over the entire Earth).  Furthermore, many of these phenomena must be studied at a global scale.  However, there are limitations to GCMs.  Primarily, given the large scale analysis, grid cells and computation points for these models are actually quite large.  This leads to problems when trying to study local phenomena, such as the climate of a specific city or region.  This is when downscaling must be used.  There are two types of downscaling: Dynamical and Statistical. 
@@ -44,10 +44,10 @@ Statistical Downscaling, SD, consists of a identified historical period (calibra
 Sources include the Copernicus Climate Change Service (C3S), National Oceanic and Atmospheric Administration (NOAA), Evaluaation of statistical downscaling methods for climate change projections over Spain: Present conditions with perfect predictors (2021).
 :::
 
-# Project
+## Project Introduction
 For this project, I will be conducting a slightly different analysis than others in the class.  As I proposed to Dr. Doss-Gollin, I want to undertake a deep dive into a Julia based Downscaling Package, RainFARM, analyze the methods and algorithms used, and apply it to the larger scale precipitation data.
 
-# RainFARM
+## RainFARM
 According to Rebora et al. (2006b), RainFARM aims to generate "an ensemble of stochastic realizations of the small-scale precipitation fields that have statistical properties similar to those measured for rainfall in a given area and/or synoptic situation."  In other words, RainFARM takes course data and downscales it to a finer scale while still keeping similar statistical properties (e.g. it presents a faithful representataion of what your data could look like on the finer scale).  However, it is important to note that it is a stochastic process, and randomness is involved.  Consequently, it is not a deterministic process, and the results will vary each time the code is run.  This is why it is important to run the code multiple times to see many different possible downscaled outcomes.
 
 ## Common Rainfall Downscaling Methods Overview
@@ -120,19 +120,19 @@ The power spectrum Sxx(f) of a time series x(t) describes the distribution of po
 Below, I go through the steps of the RainFARM methodology set up in the Rebora paper.  First, the space-time power spectrum is defined, and Ky and Kx represent wave numbers and Omega represents angular frequency.  The Nyquist Number is also defined, and it is the maximum frequency that can be represented given the sampling frequency.  This is important because it defines the limitations of the analysis.
 
 $$
-|\hat{P}(K_{X}, K_{Y},\Omega|^2 = space \space time \space power \space spectrum
+|\hat{P}(K_{X}, K_{Y},\Omega)|^2 = space \, time \, power \, spectrum
 $$
 $$
-K_{X} \space and \space K_{Y} = wavenumbers \space in \space X \space and \space Y \space directions
+K_{X} \, and \, K_{Y} = wavenumbers \, in \, X \, and \, Y \, directions
 $$
 $$
-\Omega = angular \space frequency
+\Omega = angular \, frequency
 $$
 $$
-(K_{X}, K_{Y}) <= pi/L_{0} = Nyquist \space Number
+(K_{X}, K_{Y}) <= pi/L_{0} = Nyquist \, Number
 $$
 $$
-\Omega <= pi/T_{0} = Nyquest \space Frequency
+\Omega <= pi/T_{0} = Nyquest \, Frequency
 $$
 
 So we have an equation for the space time power spectrum above.  In addition, we have representations of our wavenumbers where the wavenumbers are the components of a wavevector along the x and y directions in the case of a two-dimensional setting.  Wavenumbers can be thought of as the spatial frequency of a wave.  In other words, the wavenumbers allow for a representation of the spatial frequency of these energy waves.  K(X) and K(Y) represent how these precipitation patterns vary in the X and Y directions.  However, the Nyquist Number defines the limitations of our understanding, but an in-depth discussion of this determination is outside the scope of this work.
@@ -201,9 +201,9 @@ using FFTW
 
 # Downloading Data
 ```{julia}
-precip_tx = NCDataset("data/precip_tx.nc")
-precip_tx_p = precip_tx["precip"]
-filled_precip_tx_p = coalesce.(precip_tx_p,0)
+precip_tx = NCDataset("data/precip_tx.nc");
+precip_tx_p = precip_tx["precip"];
+filled_precip_tx_p = coalesce.(precip_tx_p,0);
 ```
 
 # Running the RainFARM Function
@@ -228,7 +228,7 @@ using DataFrames
 slope = 1; # <3>
 nf = 5; # <4>
 r = filled_precip_tx_p; # <2>
-global downscaled_precip_tx = rainfarm(r, slope, nf)
+global downscaled_precip_tx = rainfarm(r, slope, nf);
 ```
 
 This created a variable, downscaled_precip_tx, with the downscaled precipitation data over the same time period of the original precipitation data.
@@ -242,18 +242,18 @@ The first example is an example created off of a randomly generated sin wave wit
 using FFTW
 using Plots
 
-t0 = 0              # Start time 
-fs = 44100          # Sampling rate (Hz)
-tmax = 0.1          # End time       
+t0 = 0;              # Start time 
+fs = 44100;          # Sampling rate (Hz)
+tmax = 0.1;          # End time       
 
-randfreq1 = rand(1:90)
-randfreq2 = rand(1:90)
+randfreq1 = rand(1:90);
+randfreq2 = rand(1:90);
 
 t = t0:1/fs:tmax;   
-signal = sin.(2π * randfreq1 .* t) + sin.(2π * randfreq2 .* t) # Signal
+signal = sin.(2π * randfreq1 .* t) + sin.(2π * randfreq2 .* t); # Signal
 
-F = fftshift(fft(signal))
-freqs = fftshift(fftfreq(length(t), fs))
+F = fftshift(fft(signal));
+freqs = fftshift(fftfreq(length(t), fs));
 
 # plots 
 time_domain = plot(t, signal, title = "Signal", label="f = sin(2pi $randfreq1 t) + sin(2pi $randfreq2 t)",legend=:top)
@@ -266,9 +266,9 @@ plot(time_domain, freq_domain, layout = (2,1))
 This next example selects a random row and time step in our precipitation field to visualize how the Fourier transform is applied to the data we have.
 
 ```{julia}
-randomtime = rand(1:8760)
-default_value = 0.0 # <1>
-oneslice = filled_precip_tx_p[:,:,randomtime]
+randomtime = rand(1:8760);
+default_value = 0.0; # <1>
+oneslice = filled_precip_tx_p[:,:,randomtime];
 plot()
 for i = 1:13
     t0 = 0
@@ -278,8 +278,8 @@ for i = 1:13
     signal = oneslice[i,:]
     F = fftshift(fft(signal))
     freqs = fftshift(fftfreq(length(t),fs))
-    time_domain = plot(t, signal, title = "One Row of Downscaled Precipitation Data at t = 1", xlabel="Time")
-    freq_domain = plot(freqs, abs.(F), title = "Fourier Transform of One Row of Precipitation Data at t=1", xlabel="Frequency")
+    time_domain = plot(t, signal, title = "One Row of Downscaled Precipitation Data", xlabel="Time")
+    freq_domain = plot(freqs, abs.(F), title = "Fourier Transform of One Row of Precipitation Data", xlabel="Frequency")
     global fourierplot = plot!(time_domain, freq_domain, layout = (2,1), legend=false)
 end
 display(fourierplot)
@@ -295,8 +295,8 @@ First, it is possible to analyze the original, coarse data and the downscaled da
 3. Plot the original data
 
 ```{julia}
-tenrandom = rand(1:8760, 10) # <1>
-for i in tenrandom
+randoms = rand(1:8760, 2) # <1>
+for i in randoms
     timeframe = i
     downheatmap = heatmap(downscaled_precip_tx[:, :, timeframe]) # <2>
     origheatmap = heatmap(precip_tx_p[:, :, timeframe]) # <3>
@@ -310,7 +310,7 @@ Visually, these side-by-side comparisons show reasonable results for the downsca
 You can also see this three-dimensionally.  Below, the plots show the downscaled data plotted on the grid. 
 
 ```{julia}
-for i = 1:3
+for i = 1:2
     randtime = rand(1:8760)
     xs = 1:120
     ys = 1:120
@@ -361,6 +361,7 @@ We can explore this further below.  The code below plots the downscaled data of 
 ```{julia}
 using RainFARM
 using DataFrames
+using Plots
 plot()
 randomtimestep = rand(1:8760) # <1>
 r = filled_precip_tx_p[:, :, randomtimestep] 
@@ -431,7 +432,7 @@ default_value = 0.0
 randomtimestep = rand(1:8760)
 randtime_precip_tx_p = precip_tx_p[:, :, randomtimestep]
 r = coalesce.(randtime_precip_tx_p, default_value)
-for i = 0.5:0.5:7 # <1>
+for i = 0.5:1:7 # <1>
     slope = i;
     nf = 5;
     downscaled_randslope_precip_tx = rainfarm(r, slope, nf) # <2>
@@ -471,7 +472,7 @@ default_value = 0.0
 randomtimestep = rand(1:8760)
 randtime_precip_tx_p = precip_tx_p[:, :, randomtimestep] # <1>
 r = coalesce.(randtime_precip_tx_p, default_value)
-for i = 1:2:30 # <2>
+for i = 1:5:21 # <2>
     slope = 1;
     nf = i;
     downscaled_randnf_precip_tx = rainfarm(r, slope, nf)
@@ -480,7 +481,7 @@ for i = 1:2:30 # <2>
 end
 ```
 
-This analysis starts with nf = 1, meaning the output is the original coarse data.  As nf grows, the downscaled data becomes increasingly fine.  However, there does seem to be a potential point at which the downscaled data is not improving and increasing the ratio only serves to diminish the hotspot peaks of the precipitation.  In the heatmap, this can be seen as the downscaled patterns stop changing as much as the ratio increases, but the hotspots dim.  This is another important question to consider when setting up this RainFARM model.
+This analysis starts with nf = 1, meaning the output is the original coarse data.  As nf grows, the downscaled data becomes increasingly fine.  However, there does seem to be a potential point at which the downscaled data is not improving and increasing the ratio only serves to diminish the hotspot peaks of the precipitation.  In the heatmap, this can be seen as the downscaled patterns stop changing as much as the ratio increases, but the hotspots dim.  This is another important question to consider when setting up this RainFARM model.  **Note: You will have to produce more graphs to see this point of diminishing returns, but for the sake of a shorter reporrt, I have only included a few.**
 
 # Conclusions
 
@@ -494,3 +495,8 @@ Recommendations:
 ## Model Performance
 
 The RainFARM Model seemed to make good predictions and acknowledges the sources of error in precipitation data.  These stocastic predictions represent the statistical trends of the coarse data well.  I believe it is a useful model, and I hope to use it for my thesis later!
+
+## Final Thoughts
+After a thorough analysis and deep dive into the RainFARM model, I think it is a wonderful package available to download through Julia.  Its methodology to downscale precipitation data stays faithful to the statistical properties of the coarse data, and though assumptions are made (e.g. a power law behavior and isotropic conditions within precipitation), these assumptions are backed up by many studies and are typical for precipitation modeling.  I found the results to be reasonable and the analysis I conducted supported the feasibility of this model.  However, as you  will notice with my quantile plot, there is a huge range of possible outcomes that can be produced by the RainFARM package.  My quantiles showed a wide range of potential outputs, and it is important to remember that this is likely not a great package if it is run only once.  For this model to be used well, it must be run multiple times.
+
+I am hoping to explore floodplain boundaries and create a model that can predict how these floodplains will change in the future given changing climate conditions.  I think this package may be useful as I work on my thesis, so I am glad I was able to explore it within my project.
